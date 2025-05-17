@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Avatar Cursor Tracking</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'https://cdn.skypack.dev/three@0.152.2';
+      import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.152.2/examples/jsm/loaders/GLTFLoader.js';
+      
+      let camera, scene, renderer;
+      let avatar, headBone, eyeL, eyeR;
+      
+      init();
+      animate();
+
+      function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xbfdcff);
+
+        camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 1.6, 3);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(0, 5, 5);
+        scene.add(light);
+
+        const ambient = new THREE.AmbientLight(0x888888);
+        scene.add(ambient);
+
+        const loader = new GLTFLoader();
+        loader.load('https://modelviewer.dev/shared-assets/models/Astronaut.glb', function (gltf) {
+          avatar = gltf.scene;
+          avatar.scale.set(1.2, 1.2, 1.2);
+          avatar.position.set(0, 0, 0);
+          scene.add(avatar);
+
+          // Example bones for demonstration; you may need to search through avatar for specific names
+          avatar.traverse((child) => {
+            if (child.name.toLowerCase().includes("head")) headBone = child;
+            if (child.name.toLowerCase().includes("eye_l")) eyeL = child;
+            if (child.name.toLowerCase().includes("eye_r")) eyeR = child;
+          });
+        });
+
+        const tableGeometry = new THREE.BoxGeometry(2, 0.1, 1);
+        const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x553300 });
+        const table = new THREE.Mesh(tableGeometry, tableMaterial);
+        table.position.set(0, 0.75, 0);
+        scene.add(table);
+
+        const floor = new THREE.Mesh(
+          new THREE.PlaneGeometry(10, 10),
+          new THREE.MeshStandardMaterial({ color: 0xeeeeee })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        window.addEventListener('resize', onWindowResize);
+        document.addEventListener('mousemove', onMouseMove);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      let mouse = { x: 0, y: 0 };
+
+      function onMouseMove(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        if (headBone) {
+          headBone.rotation.y = THREE.MathUtils.clamp(mouse.x * 0.5, -0.4, 0.4);
+          headBone.rotation.x = THREE.MathUtils.clamp(mouse.y * 0.3, -0.3, 0.3);
+        }
+
+        if (eyeL && eyeR) {
+          eyeL.rotation.y = THREE.MathUtils.clamp(mouse.x * 1, -0.5, 0.5);
+          eyeR.rotation.y = THREE.MathUtils.clamp(mouse.x * 1, -0.5, 0.5);
+        }
+
+        renderer.render(scene, camera);
+      }
+    </script>
+  </body>
+</html>
